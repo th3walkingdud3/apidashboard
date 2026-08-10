@@ -35,6 +35,7 @@ targets:
         PRODUCT_NAME: "API Dashboard"
         ENABLE_HARDENED_RUNTIME: YES
         ENABLE_APP_SANDBOX: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     dependencies:
       - target: APIDashboardWidgetExtension
         embed: true
