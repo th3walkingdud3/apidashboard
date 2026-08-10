@@ -20,10 +20,10 @@ struct SmallDashboardView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("TODAY")
+            Text("TODAY (EST.)")
                 .font(.caption2.bold())
                 .foregroundStyle(.secondary)
-            Text(snapshot.todaySpendDollars.asCurrency)
+            Text(snapshot.estimatedTodaySpendDollars.asCurrency)
                 .font(.title.monospacedDigit().bold())
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
@@ -42,7 +42,7 @@ struct MediumDashboardView: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
-            statColumn(title: "TODAY", value: snapshot.todaySpendDollars.asCurrency)
+            statColumn(title: "TODAY (EST.)", value: snapshot.estimatedTodaySpendDollars.asCurrency)
             Divider()
             statColumn(title: "THIS MONTH", value: snapshot.monthToDateSpendDollars.asCurrency)
         }
@@ -82,7 +82,7 @@ struct LargeDashboardView: View {
             }
 
             HStack(spacing: 0) {
-                statColumn(title: "TODAY", value: snapshot.todaySpendDollars.asCurrency)
+                statColumn(title: "TODAY (EST.)", value: snapshot.estimatedTodaySpendDollars.asCurrency)
                 statColumn(title: "THIS MONTH", value: snapshot.monthToDateSpendDollars.asCurrency)
             }
 
@@ -96,9 +96,14 @@ struct LargeDashboardView: View {
 
             Spacer(minLength: 0)
 
-            Text("Updated \(snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Text("Updated \(snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
+                if snapshot.unpricedUsageCount > 0 {
+                    Text("· \(snapshot.unpricedUsageCount) unpriced")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
         }
         .padding(4)
     }

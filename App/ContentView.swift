@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct ContentView: View {
@@ -12,6 +13,8 @@ struct ContentView: View {
             if let snapshot = model.snapshot {
                 Divider()
                 snapshotSection(snapshot)
+                Divider()
+                pricingSection(snapshot)
             }
 
             if let message = model.statusMessage {
@@ -23,7 +26,7 @@ struct ContentView: View {
             Spacer(minLength: 0)
         }
         .padding(24)
-        .frame(width: 420, height: model.snapshot == nil ? 300 : 420)
+        .frame(width: 420, height: model.snapshot == nil ? 300 : 520)
         .task {
             if model.hasSavedKey {
                 await model.refresh()
@@ -80,7 +83,7 @@ struct ContentView: View {
             }
 
             HStack(spacing: 24) {
-                statTile(title: "Today", value: snapshot.todaySpendDollars.asCurrency)
+                statTile(title: "Today (est.)", value: snapshot.estimatedTodaySpendDollars.asCurrency)
                 statTile(title: "This month", value: snapshot.monthToDateSpendDollars.asCurrency)
             }
 
@@ -89,10 +92,45 @@ struct ContentView: View {
                 statTile(title: "Output tokens (today)", value: snapshot.todayOutputTokens.asCompact)
             }
 
+            Text("\"Today\" is estimated from live token usage — Anthropic's cost API only finalizes a day's spend once it closes (UTC). \"This month\" combines that estimate with finalized prior days.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
             Button("Refresh Now") {
                 Task { await model.refresh() }
             }
             .disabled(model.isLoading)
+        }
+    }
+
+    private func pricingSection(_ snapshot: DashboardSnapshot) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Pricing table")
+                .font(.headline)
+
+            HStack {
+                Text("Last verified \(PricingTable.asOf.formatted(date: .abbreviated, time: .omitted))")
+                    .font(.caption)
+                    .foregroundStyle(PricingTable.isPossiblyStale ? .orange : .secondary)
+                Spacer()
+                Button("View current pricing ↗") {
+                    NSWorkspace.shared.open(PricingTable.sourceURL)
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+            }
+
+            if PricingTable.isPossiblyStale {
+                Text("It's been over \(PricingTable.staleAfterDays) days since this was checked — worth comparing against the page above.")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+
+            if snapshot.unpricedUsageCount > 0 {
+                Text("⚠️ \(snapshot.unpricedUsageCount) usage record(s) today used a model or service tier not in the pricing table — \"Today (est.)\" excludes them and is a floor, not exact.")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
         }
     }
 

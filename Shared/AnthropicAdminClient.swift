@@ -40,13 +40,15 @@ struct AnthropicAdminClient {
         let costBuckets = try await costTask
         let usageBuckets = try await usageTask
 
-        let monthToDate = costBuckets.reduce(0.0) { total, bucket in
+        // Sum of completed daily buckets. The current UTC day is never
+        // included here — the API doesn't return a bucket for it at all
+        // until it closes — so this is "month-to-date excluding today,"
+        // not "month-to-date as of this second."
+        let finalizedMonthToDate = costBuckets.reduce(0.0) { total, bucket in
             total + bucket.results.reduce(0.0) { $0 + $1.amountInDollars }
         }
-        let todayBucket = costBuckets.first {
-            utcCalendar.isDate($0.startingAt, inSameDayAs: startOfToday)
-        }
-        let today = todayBucket?.results.reduce(0.0) { $0 + $1.amountInDollars } ?? 0
+
+        let costEstimate = CostEstimator.estimate(from: usageBuckets, at: now)
 
         let inputTokens = usageBuckets.reduce(0) { total, bucket in
             total + bucket.results.reduce(0) { $0 + $1.totalInputTokens }
@@ -59,8 +61,9 @@ struct AnthropicAdminClient {
         return DashboardSnapshot(
             generatedAt: now,
             organizationName: organization?.name,
-            todaySpendDollars: today,
-            monthToDateSpendDollars: monthToDate,
+            finalizedMonthToDateSpendDollars: finalizedMonthToDate,
+            estimatedTodaySpendDollars: costEstimate.estimatedDollars,
+            unpricedUsageCount: costEstimate.unpricedResultCount,
             todayInputTokens: inputTokens,
             todayOutputTokens: outputTokens,
             todayRequestCount: requestCount
@@ -95,7 +98,19 @@ struct AnthropicAdminClient {
             var items = [
                 URLQueryItem(name: "starting_at", value: iso8601(startingAt)),
                 URLQueryItem(name: "ending_at", value: iso8601(endingAt)),
-                URLQueryItem(name: "bucket_width", value: "1d"),
+                // Hourly, not daily: the Admin API never returns a "1d" bucket for
+                // the still-in-progress current UTC day, so daily granularity made
+                // "today" always look like zero usage. Hourly buckets do show up
+                // progressively through the day.
+                URLQueryItem(name: "bucket_width", value: "1h"),
+                URLQueryItem(name: "limit", value: "24"),
+                // Needed for CostEstimator to price each result correctly —
+                // without grouping, model/service_tier/inference_geo come
+                // back null on every result. Array params need the `[]`
+                // suffix — plain repeated `group_by=x&group_by=y` 400s.
+                URLQueryItem(name: "group_by[]", value: "model"),
+                URLQueryItem(name: "group_by[]", value: "service_tier"),
+                URLQueryItem(name: "group_by[]", value: "inference_geo"),
             ]
             if let page { items.append(URLQueryItem(name: "page", value: page)) }
             let request = makeRequest(path: "organizations/usage_report/messages", queryItems: items)
