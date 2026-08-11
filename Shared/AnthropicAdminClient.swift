@@ -23,11 +23,21 @@ struct AnthropicAdminClient {
         return try await send(request, as: OrganizationInfo.self)
     }
 
-    /// Fetches cost and token usage for today and month-to-date (UTC) and folds
+    /// Fetches cost and token usage for today and month-to-date, and folds
     /// them into one snapshot for the widget/app to render.
+    ///
+    /// "Today" for token usage (and the live spend estimate derived from it)
+    /// uses the device's *local* calendar day — usage_report/messages
+    /// supports fine-enough granularity (hourly) to compute that accurately.
+    /// "This month" for finalized spend uses the *UTC* calendar month,
+    /// because cost_report only ever returns whole UTC-day buckets — there's
+    /// no way to ask it for a locally-aligned range. In practice this means
+    /// the very edge of the month can be off by at most one day; "today"
+    /// resetting at the wrong time of day (the bug this was chasing) would
+    /// have happened every single day, so that's the one worth fixing.
     func fetchSnapshot() async throws -> DashboardSnapshot {
         let now = Date()
-        let startOfToday = utcCalendar.startOfDay(for: now)
+        let startOfToday = Calendar.current.startOfDay(for: now)
         let startOfMonth = utcCalendar.date(
             from: utcCalendar.dateComponents([.year, .month], from: now)
         )!
