@@ -56,7 +56,6 @@ struct AnthropicAdminClient {
         let outputTokens = usageBuckets.reduce(0) { total, bucket in
             total + bucket.results.reduce(0) { $0 + ($1.outputTokens ?? 0) }
         }
-        let requestCount = usageBuckets.reduce(0) { $0 + $1.results.count }
 
         return DashboardSnapshot(
             generatedAt: now,
@@ -65,8 +64,7 @@ struct AnthropicAdminClient {
             estimatedTodaySpendDollars: costEstimate.estimatedDollars,
             unpricedUsageCount: costEstimate.unpricedResultCount,
             todayInputTokens: inputTokens,
-            todayOutputTokens: outputTokens,
-            todayRequestCount: requestCount
+            todayOutputTokens: outputTokens
         )
     }
 

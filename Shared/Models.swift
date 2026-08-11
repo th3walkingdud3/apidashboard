@@ -24,7 +24,6 @@ struct DashboardSnapshot: Codable, Equatable {
 
     let todayInputTokens: Int
     let todayOutputTokens: Int
-    let todayRequestCount: Int
 
     /// "This month, including today's live estimate" — the headline figure.
     var monthToDateSpendDollars: Double {
@@ -38,8 +37,7 @@ struct DashboardSnapshot: Codable, Equatable {
         estimatedTodaySpendDollars: 4.21,
         unpricedUsageCount: 0,
         todayInputTokens: 812_000,
-        todayOutputTokens: 143_000,
-        todayRequestCount: 214
+        todayOutputTokens: 143_000
     )
 }
 

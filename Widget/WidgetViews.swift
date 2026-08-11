@@ -91,7 +91,6 @@ struct LargeDashboardView: View {
             HStack(spacing: 0) {
                 statColumn(title: "INPUT TOKENS", value: snapshot.todayInputTokens.asCompact, big: false)
                 statColumn(title: "OUTPUT TOKENS", value: snapshot.todayOutputTokens.asCompact, big: false)
-                statColumn(title: "REQUESTS", value: "\(snapshot.todayRequestCount)", big: false)
             }
 
             Spacer(minLength: 0)
