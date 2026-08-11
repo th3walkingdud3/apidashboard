@@ -25,6 +25,10 @@ struct DashboardSnapshot: Codable, Equatable {
     let todayInputTokens: Int
     let todayOutputTokens: Int
 
+    /// Daily spend, oldest first: the last several finalized days followed
+    /// by today's live estimate as the final point. For the widget sparkline.
+    let spendHistoryDollars: [Double]
+
     /// "This month, including today's live estimate" — the headline figure.
     var monthToDateSpendDollars: Double {
         finalizedMonthToDateSpendDollars + estimatedTodaySpendDollars
@@ -37,7 +41,8 @@ struct DashboardSnapshot: Codable, Equatable {
         estimatedTodaySpendDollars: 4.21,
         unpricedUsageCount: 0,
         todayInputTokens: 812_000,
-        todayOutputTokens: 143_000
+        todayOutputTokens: 143_000,
+        spendHistoryDollars: [3.10, 5.42, 2.87, 6.01, 4.55, 3.98, 5.20, 4.21]
     )
 }
 

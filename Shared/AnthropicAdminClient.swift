@@ -35,30 +35,64 @@ struct AnthropicAdminClient {
     /// the very edge of the month can be off by at most one day; "today"
     /// resetting at the wrong time of day (the bug this was chasing) would
     /// have happened every single day, so that's the one worth fixing.
+    /// How many finalized days the spend sparkline shows, before today's
+    /// live estimate is appended as the final point.
+    private static let sparklineHistoryDays = 7
+
     func fetchSnapshot() async throws -> DashboardSnapshot {
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
         let startOfMonth = utcCalendar.date(
             from: utcCalendar.dateComponents([.year, .month], from: now)
         )!
+        // cost_report buckets are always keyed at UTC midnight — the
+        // historical lookup below has to anchor to *that*, not to local
+        // midnight, or every lookup silently misses by the UTC offset.
+        let startOfTodayUTC = utcCalendar.startOfDay(for: now)
+        let sparklineStart = utcCalendar.date(
+            byAdding: .day, value: -Self.sparklineHistoryDays, to: startOfTodayUTC
+        )!
+        // Cover whichever is further back — the sparkline's trailing window
+        // or the start of the calendar month — in one request.
+        let costRangeStart = min(startOfMonth, sparklineStart)
 
         async let orgTask = fetchOrganization()
-        async let costTask = fetchAllCostBuckets(startingAt: startOfMonth, endingAt: now)
+        async let costTask = fetchAllCostBuckets(startingAt: costRangeStart, endingAt: now)
         async let usageTask = fetchAllUsageBuckets(startingAt: startOfToday, endingAt: now)
 
         let organization = try? await orgTask
         let costBuckets = try await costTask
         let usageBuckets = try await usageTask
 
-        // Sum of completed daily buckets. The current UTC day is never
-        // included here — the API doesn't return a bucket for it at all
-        // until it closes — so this is "month-to-date excluding today,"
-        // not "month-to-date as of this second."
-        let finalizedMonthToDate = costBuckets.reduce(0.0) { total, bucket in
-            total + bucket.results.reduce(0.0) { $0 + $1.amountInDollars }
+        // Sum of completed daily buckets on/after the start of the current
+        // UTC month. The current UTC day is never included — the API
+        // doesn't return a bucket for it until it closes — so this is
+        // "month-to-date excluding today," not "as of this second."
+        let finalizedMonthToDate = costBuckets
+            .filter { $0.startingAt >= startOfMonth }
+            .reduce(0.0) { total, bucket in
+                total + bucket.results.reduce(0.0) { $0 + $1.amountInDollars }
+            }
+
+        // Last N finalized days, oldest first, for the sparkline. A day with
+        // no bucket at all (no spend, not "still open") is a real $0, not a
+        // gap — fill it in rather than compressing the timeline.
+        let dailyTotalsByStart = Dictionary(
+            costBuckets.map { ($0.startingAt, $0.results.reduce(0.0) { $0 + $1.amountInDollars }) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        // 1...N, not 0..<N: daysAgo=0 would be the current UTC day, which
+        // cost_report never has a bucket for — that's not "no spend," it's
+        // "not asked yet," and today is already covered by the estimate
+        // appended below. Including it would draw a fake zero dip right
+        // before today's point.
+        var spendHistory: [Double] = (1...Self.sparklineHistoryDays).reversed().map { daysAgo in
+            let day = utcCalendar.date(byAdding: .day, value: -daysAgo, to: startOfTodayUTC)!
+            return dailyTotalsByStart[day] ?? 0
         }
 
         let costEstimate = CostEstimator.estimate(from: usageBuckets, at: now)
+        spendHistory.append(costEstimate.estimatedDollars)
 
         let inputTokens = usageBuckets.reduce(0) { total, bucket in
             total + bucket.results.reduce(0) { $0 + $1.totalInputTokens }
@@ -74,7 +108,8 @@ struct AnthropicAdminClient {
             estimatedTodaySpendDollars: costEstimate.estimatedDollars,
             unpricedUsageCount: costEstimate.unpricedResultCount,
             todayInputTokens: inputTokens,
-            todayOutputTokens: outputTokens
+            todayOutputTokens: outputTokens,
+            spendHistoryDollars: spendHistory
         )
     }
 

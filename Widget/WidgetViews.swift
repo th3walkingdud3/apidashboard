@@ -27,7 +27,9 @@ struct SmallDashboardView: View {
                 .font(.title.monospacedDigit().bold())
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            Spacer()
+            Spacer(minLength: 2)
+            SpendSparkline(values: snapshot.spendHistoryDollars)
+                .frame(height: 22)
             Text(snapshot.generatedAt, style: .time)
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
@@ -41,18 +43,17 @@ struct MediumDashboardView: View {
     let snapshot: DashboardSnapshot
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
-            statColumn(title: "TODAY (EST.)", value: snapshot.estimatedTodaySpendDollars.asCurrency)
-            Divider()
-            statColumn(title: "THIS MONTH", value: snapshot.monthToDateSpendDollars.asCurrency)
+        VStack(spacing: 6) {
+            HStack(alignment: .top, spacing: 0) {
+                statColumn(title: "TODAY (EST.)", value: snapshot.estimatedTodaySpendDollars.asCurrency)
+                Divider()
+                statColumn(title: "THIS MONTH", value: snapshot.monthToDateSpendDollars.asCurrency)
+            }
+            SpendSparkline(values: snapshot.spendHistoryDollars)
+                .frame(height: 28)
+                .padding(.horizontal, 8)
         }
         .padding(4)
-        .overlay(alignment: .bottomTrailing) {
-            Text(snapshot.generatedAt, style: .time)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-                .padding([.trailing, .bottom], 4)
-        }
     }
 
     private func statColumn(title: String, value: String) -> some View {
@@ -92,6 +93,9 @@ struct LargeDashboardView: View {
                 statColumn(title: "INPUT TOKENS", value: snapshot.todayInputTokens.asCompact, big: false)
                 statColumn(title: "OUTPUT TOKENS", value: snapshot.todayOutputTokens.asCompact, big: false)
             }
+
+            SpendSparkline(values: snapshot.spendHistoryDollars)
+                .frame(height: 44)
 
             Spacer(minLength: 0)
 
