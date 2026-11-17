@@ -24,8 +24,8 @@ enum PricingTable {
     static let asOf: Date = {
         var components = DateComponents()
         components.year = 2026
-        components.month = 8
-        components.day = 10
+        components.month = 11
+        components.day = 16
         components.timeZone = TimeZone(identifier: "UTC")
         return Calendar(identifier: .gregorian).date(from: components)!
     }()
@@ -53,49 +53,47 @@ enum PricingTable {
 
     /// Returns nil for anything not in the table below — callers must treat
     /// that as "can't price this," not as free. See CostEstimator.
-    static func price(for modelID: String, at date: Date = Date()) -> ModelPrice? {
-        if modelID == "claude-sonnet-5" {
-            return date < sonnet5IntroEndsAt ? sonnet5Intro : sonnet5Standard
-        }
-        return catalog[modelID]
+    static func price(for modelID: String) -> ModelPrice? {
+        catalog[modelID]
     }
-
-    // Sonnet 5 introductory pricing ends 2026-08-31 (inclusive), UTC.
-    private static let sonnet5IntroEndsAt: Date = {
-        var components = DateComponents()
-        components.year = 2026
-        components.month = 8
-        components.day = 31
-        components.hour = 23
-        components.minute = 59
-        components.second = 59
-        components.timeZone = TimeZone(identifier: "UTC")
-        return Calendar(identifier: .gregorian).date(from: components)!
-    }()
-
-    private static let sonnet5Intro = ModelPrice(
-        inputPerMTok: 2, cacheWrite5mPerMTok: 2.50, cacheWrite1hPerMTok: 4,
-        cacheReadPerMTok: 0.20, outputPerMTok: 10
-    )
-    private static let sonnet5Standard = ModelPrice(
-        inputPerMTok: 3, cacheWrite5mPerMTok: 3.75, cacheWrite1hPerMTok: 6,
-        cacheReadPerMTok: 0.30, outputPerMTok: 15
-    )
 
     // Prices as published at `asOf`. Each model is keyed under both its
     // alias and (where one exists) its dated snapshot ID, since it's not
     // documented which form the Admin API's `model` field actually returns.
     private static let catalog: [String: ModelPrice] = {
+        let fable52 = ModelPrice(inputPerMTok: 8, cacheWrite5mPerMTok: 10, cacheWrite1hPerMTok: 16, cacheReadPerMTok: 0.20, outputPerMTok: 40)
+        let fable51 = ModelPrice(inputPerMTok: 10, cacheWrite5mPerMTok: 12.50, cacheWrite1hPerMTok: 20, cacheReadPerMTok: 0.25, outputPerMTok: 50)
         let fable5 = ModelPrice(inputPerMTok: 10, cacheWrite5mPerMTok: 12.50, cacheWrite1hPerMTok: 20, cacheReadPerMTok: 1, outputPerMTok: 50)
+        let opus55 = ModelPrice(inputPerMTok: 4, cacheWrite5mPerMTok: 5, cacheWrite1hPerMTok: 8, cacheReadPerMTok: 0.20, outputPerMTok: 20)
         let opus5 = ModelPrice(inputPerMTok: 5, cacheWrite5mPerMTok: 6.25, cacheWrite1hPerMTok: 10, cacheReadPerMTok: 0.50, outputPerMTok: 25)
         let opus41 = ModelPrice(inputPerMTok: 15, cacheWrite5mPerMTok: 18.75, cacheWrite1hPerMTok: 30, cacheReadPerMTok: 1.50, outputPerMTok: 75)
+        let sonnet55 = ModelPrice(inputPerMTok: 2, cacheWrite5mPerMTok: 2.50, cacheWrite1hPerMTok: 4, cacheReadPerMTok: 0.10, outputPerMTok: 10)
+        // $2/$10 was Sonnet 5's launch pricing, originally scheduled to rise
+        // to $3/$15 on 2026-09-01 — that increase was cancelled and $2/$10 is
+        // now the permanent price, so there's no date-based split anymore.
+        let sonnet5 = ModelPrice(inputPerMTok: 2, cacheWrite5mPerMTok: 2.50, cacheWrite1hPerMTok: 4, cacheReadPerMTok: 0.20, outputPerMTok: 10)
         let sonnet46 = ModelPrice(inputPerMTok: 3, cacheWrite5mPerMTok: 3.75, cacheWrite1hPerMTok: 6, cacheReadPerMTok: 0.30, outputPerMTok: 15)
+        // Haiku 5.5 is actually priced by prompt length: a request over
+        // 100,000 input tokens (including cache reads/writes) pays 5x this.
+        // The usage report only gives bucket totals, not per-request prompt
+        // lengths, so there's no way to tell long-context requests apart
+        // from aggregated data — this prices every Haiku 5.5 request at the
+        // standard tier, which under-counts if long-context usage happened.
+        let haiku55 = ModelPrice(inputPerMTok: 0.10, cacheWrite5mPerMTok: 0.125, cacheWrite1hPerMTok: 0.20, cacheReadPerMTok: 0.01, outputPerMTok: 0.50)
         let haiku45 = ModelPrice(inputPerMTok: 1, cacheWrite5mPerMTok: 1.25, cacheWrite1hPerMTok: 2, cacheReadPerMTok: 0.10, outputPerMTok: 5)
         let haiku35 = ModelPrice(inputPerMTok: 0.80, cacheWrite5mPerMTok: 1, cacheWrite1hPerMTok: 1.60, cacheReadPerMTok: 0.08, outputPerMTok: 4)
 
         return [
+            "claude-fable-5-2": fable52,
+            "claude-mythos-5-2": fable52,
+
+            "claude-fable-5-1": fable51,
+            "claude-mythos-5-1": fable51,
+
             "claude-fable-5": fable5,
             "claude-mythos-5": fable5,
+
+            "claude-opus-5-5": opus55,
 
             "claude-opus-5": opus5,
             "claude-opus-4-8": opus5,
@@ -109,11 +107,16 @@ enum PricingTable {
             "claude-opus-4-0": opus41,
             "claude-opus-4-20250514": opus41,
 
+            "claude-sonnet-5-5": sonnet55,
+            "claude-sonnet-5": sonnet5,
+
             "claude-sonnet-4-6": sonnet46,
             "claude-sonnet-4-5": sonnet46,
             "claude-sonnet-4-5-20250929": sonnet46,
             "claude-sonnet-4-0": sonnet46,
             "claude-sonnet-4-20250514": sonnet46,
+
+            "claude-haiku-5-5": haiku55,
 
             "claude-haiku-4-5": haiku45,
             "claude-haiku-4-5-20251001": haiku45,

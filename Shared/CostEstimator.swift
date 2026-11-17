@@ -11,14 +11,14 @@ enum CostEstimator {
         let unpricedResultCount: Int
     }
 
-    static func estimate(from buckets: [MessagesUsageBucket], at date: Date = Date()) -> Result {
+    static func estimate(from buckets: [MessagesUsageBucket]) -> Result {
         var total = 0.0
         var unpriced = 0
 
         for bucket in buckets {
             for result in bucket.results {
                 guard let modelID = result.model,
-                      let price = PricingTable.price(for: modelID, at: date) else {
+                      let price = PricingTable.price(for: modelID) else {
                     unpriced += 1
                     continue
                 }

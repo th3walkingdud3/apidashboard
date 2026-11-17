@@ -1,4 +1,14 @@
+import AppIntents
 import SwiftUI
+
+private struct RefreshButton: View {
+    var body: some View {
+        Button(intent: RefreshWidgetIntent()) {
+            Image(systemName: "arrow.clockwise")
+        }
+        .buttonStyle(.plain)
+    }
+}
 
 struct SetupPromptView: View {
     var body: some View {
@@ -30,9 +40,18 @@ struct SmallDashboardView: View {
             Spacer(minLength: 2)
             SpendSparkline(values: snapshot.spendHistoryDollars)
                 .frame(height: 22)
-            Text(snapshot.generatedAt, style: .time)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+            HStack(spacing: 4) {
+                Text("Updated \(snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
+                if snapshot.unpricedUsageCount > 0 {
+                    Text("· \(snapshot.unpricedUsageCount) unpriced")
+                }
+                Spacer(minLength: 4)
+                RefreshButton()
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(4)
@@ -52,6 +71,19 @@ struct MediumDashboardView: View {
             SpendSparkline(values: snapshot.spendHistoryDollars)
                 .frame(height: 28)
                 .padding(.horizontal, 8)
+
+            HStack(spacing: 4) {
+                Text("Updated \(snapshot.generatedAt.formatted(date: .omitted, time: .shortened))")
+                if snapshot.unpricedUsageCount > 0 {
+                    Text("· \(snapshot.unpricedUsageCount) unpriced")
+                }
+                Spacer(minLength: 4)
+                RefreshButton()
+            }
+            .font(.caption2)
+            .foregroundStyle(.tertiary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
         }
         .padding(4)
     }
@@ -104,6 +136,8 @@ struct LargeDashboardView: View {
                 if snapshot.unpricedUsageCount > 0 {
                     Text("· \(snapshot.unpricedUsageCount) unpriced")
                 }
+                Spacer(minLength: 4)
+                RefreshButton()
             }
             .font(.caption2)
             .foregroundStyle(.tertiary)

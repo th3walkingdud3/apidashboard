@@ -19,3 +19,6 @@ DerivedData/
 # Secrets — never commit an Admin API key
 *.env
 Secrets.swift
+
+# Local build output
+build/

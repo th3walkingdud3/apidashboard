@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var model = DashboardViewModel()
+    @State private var isShowingPricingCheck = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -31,6 +32,9 @@ struct ContentView: View {
             if model.hasSavedKey {
                 await model.refresh()
             }
+        }
+        .sheet(isPresented: $isShowingPricingCheck) {
+            PricingCheckView()
         }
     }
 
@@ -113,7 +117,12 @@ struct ContentView: View {
                     .font(.caption)
                     .foregroundStyle(PricingTable.isPossiblyStale ? .orange : .secondary)
                 Spacer()
-                Button("View current pricing ↗") {
+                Button("Check pricing now") {
+                    isShowingPricingCheck = true
+                }
+                .buttonStyle(.link)
+                .font(.caption)
+                Button("Open in browser ↗") {
                     NSWorkspace.shared.open(PricingTable.sourceURL)
                 }
                 .buttonStyle(.link)

@@ -2,10 +2,10 @@ import WidgetKit
 import SwiftUI
 
 struct APIDashboardWidget: Widget {
-    let kind: String = "APIDashboardWidget"
+    nonisolated static let kind = "APIDashboardWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: Provider()) { entry in
+        StaticConfiguration(kind: Self.kind, provider: Provider()) { entry in
             APIDashboardWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }

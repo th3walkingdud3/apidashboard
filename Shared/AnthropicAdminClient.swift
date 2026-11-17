@@ -91,7 +91,7 @@ struct AnthropicAdminClient {
             return dailyTotalsByStart[day] ?? 0
         }
 
-        let costEstimate = CostEstimator.estimate(from: usageBuckets, at: now)
+        let costEstimate = CostEstimator.estimate(from: usageBuckets)
         spendHistory.append(costEstimate.estimatedDollars)
 
         let inputTokens = usageBuckets.reduce(0) { total, bucket in
